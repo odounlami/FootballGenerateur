@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles, Target, TrendingUp, Shield, Check, ChevronRight, AlertCircle, Search, Key } from 'lucide-react';
+import { Sparkles, Target, TrendingUp, Shield, Check, ChevronRight, AlertCircle } from 'lucide-react';
 
 interface Match {
   match: string;
@@ -36,24 +36,16 @@ export default function FootballBetGenerator() {
   const [error, setError] = useState<string>('');
   const [showGenerator, setShowGenerator] = useState<boolean>(false);
   const [matchesFound, setMatchesFound] = useState<RealMatch[]>([]);
-  const [apiKey, setApiKey] = useState<string>('9bf103ef0a49957cb8af5b0b6f531144');
-  const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(false);
 
   // Fonction pour récupérer les matchs via API-Football
-  const fetchRealMatchesFromAPI = async (apiKeyToUse: string): Promise<RealMatch[]> => {
+  const fetchRealMatchesFromAPI = async (): Promise<RealMatch[]> => {
     setFetchingMatches(true);
     try {
       const today = new Date();
-      const dateStr = today.toISOString().split('T')[0]; // Format YYYY-MM-DD
+      const dateStr = today.toISOString().split('T')[0];
       
-      // Appel à API-Football pour TOUS les matchs du jour
-      const response = await fetch(`https://v3.football.api-sports.io/fixtures?date=${dateStr}`, {
-        method: 'GET',
-        headers: {
-          'x-rapidapi-key': apiKeyToUse,
-          'x-rapidapi-host': 'v3.football.api-sports.io'
-        }
-      });
+      // Utiliser la route API Next.js
+      const response = await fetch(`/api/football?date=${dateStr}`);
 
       if (!response.ok) {
         throw new Error('Erreur API-Football. Vérifiez votre clé API.');
@@ -62,18 +54,12 @@ export default function FootballBetGenerator() {
       const data = await response.json();
       
       if (!data.response || data.response.length === 0) {
-        // Si aucun match aujourd'hui, essayer demain
+        // Essayer demain
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
         
-        const responseTomorrow = await fetch(`https://v3.football.api-sports.io/fixtures?date=${tomorrowStr}`, {
-          method: 'GET',
-          headers: {
-            'x-rapidapi-key': apiKeyToUse,
-            'x-rapidapi-host': 'v3.football.api-sports.io'
-          }
-        });
+        const responseTomorrow = await fetch(`/api/football?date=${tomorrowStr}`);
         
         if (responseTomorrow.ok) {
           const dataTomorrow = await responseTomorrow.json();
@@ -83,7 +69,7 @@ export default function FootballBetGenerator() {
         }
         
         if (!data.response || data.response.length === 0) {
-          throw new Error('Aucun match trouvé aujourd\'hui ni demain');
+          throw new Error('Aucun match trouvé');
         }
       }
 
@@ -106,7 +92,6 @@ export default function FootballBetGenerator() {
 
       const matches: RealMatch[] = data.response
         .filter((fixture: any) => {
-          // Filtrer par ID de ligue
           return topLeagueIds.includes(fixture.league.id);
         })
         .map((fixture: any) => {
@@ -117,7 +102,6 @@ export default function FootballBetGenerator() {
           const homeTeam = fixture.teams.home.name;
           const awayTeam = fixture.teams.away.name;
           
-          // Score de popularité (0-2 : 0 = pas top club, 1 = 1 top club, 2 = 2 top clubs)
           const popularityScore = 
             (topClubs.some(club => homeTeam.includes(club)) ? 1 : 0) +
             (topClubs.some(club => awayTeam.includes(club)) ? 1 : 0);
@@ -130,13 +114,11 @@ export default function FootballBetGenerator() {
             popularityScore
           };
         })
-        // Trier par popularité d'abord (matchs avec top clubs en premier)
         .sort((a: any, b: any) => b.popularityScore - a.popularityScore)
-        .slice(0, 20) // Prendre top 20 matchs
-        .map(({ popularityScore, ...match }: any) => match); // Retirer le score de popularité
+        .slice(0, 20)
+        .map(({ popularityScore, ...match }: any) => match);
 
       if (matches.length === 0) {
-        // Si aucun match des grandes ligues, prendre n'importe quels matchs
         const anyMatches: RealMatch[] = data.response
           .slice(0, 15)
           .map((fixture: any) => {
@@ -164,14 +146,14 @@ export default function FootballBetGenerator() {
       return matches;
       
     } catch (error) {
-      console.error('Erreur API-Football:', error);
+      // console.error('Erreur API-Football:', error);
       throw error;
     } finally {
       setFetchingMatches(false);
     }
   };
 
-  // Matchs de démo si pas d'API key
+  // Matchs de démo
   const getDemoMatches = (): RealMatch[] => {
     const demoMatches: RealMatch[] = [
       { homeTeam: 'Arsenal', awayTeam: 'Manchester United', time: '18:30', league: 'Premier League' },
@@ -188,176 +170,200 @@ export default function FootballBetGenerator() {
     return demoMatches;
   };
 
-  const generateCombinations = async () => {
-    if (!budget || !targetOdds) {
-      setError('Veuillez remplir tous les champs');
-      return;
-    }
+const generateCombinations = async () => {
+  if (!budget || !targetOdds) {
+    setError('Veuillez remplir tous les champs');
+    return;
+  }
 
-    const budgetNum = parseFloat(budget);
-    const oddsNum = parseFloat(targetOdds);
+  const budgetNum = parseFloat(budget);
+  const oddsNum = parseFloat(targetOdds);
 
-    if (budgetNum <= 0 || budgetNum > 1000) {
-      setError('Budget doit être entre 1€ et 1000€');
-      return;
-    }
+  if (budgetNum <= 0 || budgetNum > 1000) {
+    setError('Budget doit être entre 1€ et 1000€');
+    return;
+  }
 
-    if (oddsNum < 2.0 || oddsNum > 50.0) {
-      setError('Cote cible doit être entre 2.0 et 50.0');
-      return;
-    }
+  if (oddsNum < 2.0 || oddsNum > 50.0) {
+    setError('Cote cible doit être entre 2.0 et 50.0');
+    return;
+  }
 
-    setLoading(true);
-    setError('');
-    setCombinations([]);
+  setLoading(true);
+  setError('');
+  setCombinations([]);
 
+  try {
+    let realMatches: RealMatch[];
+
+    // Récupérer les matchs (API ou démo)
     try {
-      let realMatches: RealMatch[];
+      realMatches = await fetchRealMatchesFromAPI();
+    } catch (err) {
+      // console.log('Erreur API-Football, utilisation matchs démo');
+      realMatches = getDemoMatches();
+    }
 
-      // Récupérer les matchs (API ou démo)
-      if (apiKey && apiKey.length > 10) {
+    if (realMatches.length === 0) {
+      throw new Error('Aucun match disponible');
+    }
+
+    const matchesData = realMatches.map(m => 
+      `${m.homeTeam} vs ${m.awayTeam} (${m.time}, ${m.league})`
+    ).join('\n');
+
+    // Fonction helper pour retry avec délai
+    const fetchWithRetry = async (url: string, options: any, maxRetries = 5) => {
+      for (let i = 0; i < maxRetries; i++) {
         try {
-          realMatches = await fetchRealMatchesFromAPI(apiKey);
-        } catch (err) {
-          setError('Erreur API-Football. Utilisation des matchs de démo.');
-          realMatches = getDemoMatches();
-        }
-      } else {
-        realMatches = getDemoMatches();
-      }
-
-      if (realMatches.length === 0) {
-        throw new Error('Aucun match disponible');
-      }
-
-      const matchesData = realMatches.map(m => 
-        `${m.homeTeam} vs ${m.awayTeam} (${m.time}, ${m.league})`
-      ).join('\n');
-
-      // Fonction helper pour retry avec délai
-      const fetchWithRetry = async (url: string, options: any, maxRetries = 5) => {
-        for (let i = 0; i < maxRetries; i++) {
-          try {
-            const response = await fetch(url, options);
-            
-            if (response.status === 429) {
-              // Rate limit, attendre plus longtemps
-              const waitTime = Math.min(Math.pow(2, i) * 3000, 30000); // 3s, 6s, 12s, 24s, 30s max
-              console.log(`⏳ Rate limit détecté. Attente de ${waitTime/1000}s avant nouvelle tentative...`);
-              setError(`⏳ Trop de requêtes. Nouvelle tentative dans ${waitTime/1000}s...`);
-              await new Promise(resolve => setTimeout(resolve, waitTime));
-              setError(''); // Effacer le message avant retry
-              continue;
-            }
-            
-            return response;
-          } catch (error) {
-            if (i === maxRetries - 1) throw error;
-            await new Promise(resolve => setTimeout(resolve, 2000));
+          const response = await fetch(url, options);
+          
+          if (response.status === 429) {
+            const waitTime = Math.min(Math.pow(2, i) * 3000, 30000);
+            // console.log(`⏳ Rate limit détecté. Attente de ${waitTime/1000}s avant nouvelle tentative...`);
+            setError(`⏳ Trop de requêtes. Nouvelle tentative dans ${waitTime/1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            setError('');
+            continue;
           }
+          
+          return response;
+        } catch (error) {
+          if (i === maxRetries - 1) throw error;
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
-        throw new Error('OpenRouter est temporairement surchargé. Attendez 2-3 minutes et réessayez.');
-      };
+      }
+      throw new Error('Service temporairement indisponible. Réessayez dans quelques instants.');
+    };
 
-      // Génération des combinés avec Claude
-      const response = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer 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',
-          'HTTP-Referer': window.location.href,
-          'X-Title': 'Générateur de Combinés Football'
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.0-flash-exp:free',
-          messages: [
-            {
-              role: 'system',
-              content: `Expert paris sportifs football. Crée des combinés réalistes.
+    // Génération des combinés via route API
+    const response = await fetchWithRetry('/api/groq', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-exp:free',
+messages: [
+  {
+    role: 'system',
+    content: `Tu es un expert en paris sportifs football avec 10 ans d'expérience.
 
-RÈGLES :
-1. Utilise UNIQUEMENT les matchs fournis
-2. Cote totale entre ${oddsNum - 0.8} et ${oddsNum + 0.8}
-3. Paris : 1X2, BTTS, Over/Under, Double Chance
-4. Cotes individuelles : 1.25 à 3.50
-5. 3 combinés : Sécurité, Équilibré, Risqué`
-            },
-            {
-              role: 'user',
-              content: `MATCHS :
+RÈGLES STRICTES :
+1. Utilise UNIQUEMENT les matchs fournis par l'utilisateur
+2. Génère EXACTEMENT 3 combinés avec des cotes totales entre ${oddsNum - 0.8} et ${oddsNum + 0.8}
+3. Types de paris autorisés : 1 (victoire domicile), X (match nul), 2 (victoire extérieur), 1X, X2, 12 (double chance), BTTS (les deux marquent), Over 2.5 buts, Under 3.5 buts
+4. Cotes individuelles réalistes : entre 1.25 et 3.50
+5. Chaque combiné doit avoir 3 à 5 matchs
+6. Les 3 combinés doivent avoir des stratégies différentes :
+   - Combiné Sécurité : favoris, double chance, under (cotes basses 1.3-1.8)
+   - Combiné Équilibré : mix favoris/outsiders (cotes moyennes 1.6-2.3)
+   - Combiné Risqué : outsiders, handicaps, over (cotes hautes 2.0-3.5)
+
+IMPORTANT : Réponds UNIQUEMENT avec du JSON valide, sans texte avant ou après, sans balises markdown.`
+  },
+  {
+    role: 'user',
+    content: `MATCHS DISPONIBLES :
 ${matchesData}
 
-Génère 3 combinés :
-- Budget : ${budget}€
-- Cote : ${targetOdds}
+OBJECTIF :
+- Budget du parieur : ${budget}€
+- Cote totale cible : ${targetOdds}
 
-JSON (sans markdown) :
+Génère 3 combinés différents en JSON :
+
 {
   "combinations": [
     {
       "name": "Combiné Sécurité",
-      "matches": [{"match": "Arsenal vs Man United", "bet": "Arsenal (1)", "odds": "1.85", "kickoff": "18:30", "league": "Premier League"}],
-      "totalOdds": "5.2",
+      "matches": [
+        {
+          "match": "Arsenal vs Manchester United",
+          "bet": "1X (Double Chance Arsenal)",
+          "odds": "1.45",
+          "kickoff": "18:30",
+          "league": "Premier League"
+        }
+      ],
+      "totalOdds": "5.20",
       "potentialWin": "52.00€",
-      "analysis": "Arsenal domine à domicile."
+      "analysis": "Analyse détaillée : pourquoi ces paris sont sûrs, statistiques récentes, forme des équipes."
     }
   ]
-}`
-            }
-          ],
-          temperature: 0.5,
-          max_tokens: 2000
-        })
-      });
+}
 
-      if (!response) {
-        throw new Error('Erreur génération IA');
-      }
+Assure-toi que la cote totale de chaque combiné est proche de ${targetOdds} (±0.8).`
+  }
+],
+        temperature: 0.5,
+        max_tokens: 2000
+      })
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        if (response.status === 429) {
-          throw new Error('⏳ Limite de requêtes atteinte. Attendez 2-3 minutes puis réessayez. OpenRouter limite les appels gratuits à ~10/minute.');
-        }
-        throw new Error(errorData.error?.message || 'Erreur génération IA');
-      }
-
-      const data = await response.json();
-      const content = data.choices[0].message.content;
-      
-      let jsonContent = content.trim()
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '');
-      
-      const jsonMatch = jsonContent.match(/\{[\s\S]*"combinations"[\s\S]*\}/);
-      if (jsonMatch) {
-        jsonContent = jsonMatch[0];
-      }
-      
-      const parsed = JSON.parse(jsonContent);
-      
-      if (!parsed.combinations || !Array.isArray(parsed.combinations)) {
-        throw new Error('Format invalide');
-      }
-
-      const validCombinations = parsed.combinations.filter((combo: Combination) => {
-        const totalOdds = parseFloat(combo.totalOdds);
-        return Math.abs(totalOdds - oddsNum) <= 1.5 && combo.matches && combo.matches.length >= 3;
-      });
-
-      if (validCombinations.length === 0) {
-        setError(`Impossible de générer pour cote ${targetOdds}. Essayez 2.0-15.0`);
-      } else {
-        setCombinations(validCombinations);
-      }
-      
-    } catch (err) {
-      console.error('Erreur:', err);
-      setError(err instanceof Error ? err.message : 'Erreur génération');
-    } finally {
-      setLoading(false);
+    if (!response) {
+      throw new Error('Erreur génération IA');
     }
-  };
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      // console.error('Erreur API:', errorData);
+      
+      if (response.status === 429) {
+        throw new Error('⏳ Limite de requêtes atteinte. Attendez 2-3 minutes puis réessayez.');
+      }
+      
+      throw new Error(errorData.error?.message || `Erreur API (${response.status})`);
+    }
+
+    const data = await response.json();
+    // console.log('✅ Réponse IA reçue:', data);
+    // VÉRIFICATION IMPORTANTE : s'assurer que data.choices existe
+    if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+      // console.error('Format de réponse invalide:', data);
+      throw new Error('Format de réponse invalide de l\'API IA');
+    }
+    
+    const content = data.choices[0].message.content;
+    // console.log('✅ Contenu IA:', content); 
+    if (!content) {
+      // console.error('Contenu vide dans la réponse:', data);
+      throw new Error('Réponse IA vide');
+    }
+    
+    let jsonContent = content.trim()
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '');
+    
+    const jsonMatch = jsonContent.match(/\{[\s\S]*"combinations"[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonContent = jsonMatch[0];
+    }
+    
+    const parsed = JSON.parse(jsonContent);
+    
+    if (!parsed.combinations || !Array.isArray(parsed.combinations)) {
+      throw new Error('Format JSON invalide');
+    }
+
+    const validCombinations = parsed.combinations.filter((combo: Combination) => {
+      const totalOdds = parseFloat(combo.totalOdds);
+      return Math.abs(totalOdds - oddsNum) <= 1.5 && combo.matches && combo.matches.length >= 3;
+    });
+
+    if (validCombinations.length === 0) {
+      setError(`Impossible de générer pour cote ${targetOdds}. Essayez 2.0-15.0`);
+    } else {
+      setCombinations(validCombinations);
+    }
+    
+  } catch (err) {
+    // console.error('Erreur:', err);
+    setError(err instanceof Error ? err.message : 'Erreur génération');
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (showGenerator) {
     return (
