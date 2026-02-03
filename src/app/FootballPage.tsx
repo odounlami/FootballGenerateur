@@ -527,7 +527,6 @@ Assure-toi que la cote totale de chaque combiné est proche de ${targetOdds} (±
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 bg-purple-600/20 backdrop-blur-sm border border-purple-500/30 rounded-full px-6 py-2 mb-8">
               <Sparkles className="w-4 h-4 text-purple-300" />
-              <span className="text-purple-200 text-sm font-medium">Propulsé par Claude AI + API-Football</span>
             </div>
             
             <h1 className="text-6xl md:text-7xl font-black text-white mb-6 leading-tight">
@@ -550,7 +549,7 @@ Assure-toi que la cote totale de chaque combiné est proche de ${targetOdds} (±
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-20">
+      <div className="container mx-auto px-4 py-20 ">
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 hover:border-purple-500/50 hover:scale-105 transition-all">
             <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-6">
@@ -578,7 +577,7 @@ Assure-toi que la cote totale de chaque combiné est proche de ${targetOdds} (±
             </div>
             <h3 className="text-2xl font-bold text-white mb-4">IA Spécialisée</h3>
             <p className="text-gray-300 leading-relaxed">
-              Claude optimisé pour l'analyse football et paris sportifs
+              Groq optimisé pour l'analyse football et paris sportifs
             </p>
           </div>
         </div>
@@ -617,7 +616,7 @@ Assure-toi que la cote totale de chaque combiné est proche de ${targetOdds} (±
             Prêt à gagner ?
           </h2>
           <p className="text-xl text-white/90 mb-8">
-            Testez gratuitement avec matchs démo ou activez API-Football
+          Testez le générateur maintenant
           </p>
           <button
             onClick={() => setShowGenerator(true)}
