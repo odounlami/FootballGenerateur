@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-    //   console.error('❌ Erreur Groq:', errorData);
+      console.error('❌ Erreur Groq:', errorData);
       return NextResponse.json(
         { error: errorData.error?.message || 'Erreur Groq API' },
         { status: res.status }
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     return NextResponse.json(data);
     
   } catch (error) {
-    // console.error('Erreur serveur Groq:', error);
+    console.error('Erreur serveur Groq:', error);
     return NextResponse.json(
       { error: 'Erreur serveur interne' },
       { status: 500 }

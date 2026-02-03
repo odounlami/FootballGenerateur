@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     // Essayer chaque modèle IA
     for (const model of aiModels) {
       try {
-        // console.log(`Tentative avec le modèle IA: ${model}`);
+        console.log(`Tentative avec le modèle IA: ${model}`);
         
         const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
         if (res.ok) {
           const data = await res.json();
-        //   console.log(`✅ Succès avec le modèle: ${model}`);
+          console.log(`✅ Succès avec le modèle: ${model}`);
           return NextResponse.json(data);
         }
         
